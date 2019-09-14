@@ -100,12 +100,12 @@ int main()
 	glDeleteShader(fragmentShader);
 
 	float vertices[] = {
-		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, //Top left
-		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Top right
-		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Bottom right
-		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Bottom right
-     	-1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, //Bottom left
-		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f  //Top left
+		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, //Top left
+		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Top right
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Bottom right
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Bottom right
+     	-1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, //Bottom left
+		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f  //Top left
 	};
 
 	unsigned int VBO, VAO;
@@ -145,11 +145,16 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	unsigned char imageData[] = {
-		255, 0, 0, 
-		0, 255, 0, 
-		0, 0, 255, 
-		255, 255, 255
+	unsigned char imageData[3*3*4] = {
+		80, 0, 0, 255, 
+		100, 0, 0, 255,
+		255, 0, 0, 255,
+		0, 80, 0, 255,
+		0, 100, 0, 255,
+		0, 255, 0, 255,
+		0, 0, 80, 255,
+		0, 0, 100, 255,
+		0, 0, 255, 255
 	};
 
 	while (!glfwWindowShouldClose(window))
@@ -158,7 +163,7 @@ int main()
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE, &imageData);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 3, 3, 0, GL_BGRA, GL_UNSIGNED_BYTE, &imageData);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glUseProgram(shaderProgram);
