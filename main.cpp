@@ -10,8 +10,8 @@ int compileFragmentShader(const char* source);
 int linkShaders(const int vertexShader, const int fragmentShader);
 
 // settings
-const unsigned int SCR_WIDTH = 320;
-const unsigned int SCR_HEIGHT = 180;
+static const unsigned int SCREEN_WIDTH = 320;
+static const unsigned int SCREEN_HEIGHT = 180;
 
 const char* VERTEX_SHADER_SRC = 
 "#version 330 core\n"
@@ -43,7 +43,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Alien 8", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Alien 8", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -115,18 +115,15 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	const int imageDataLength = 3 * 3 * 4;
-	unsigned char imageData[imageDataLength] = {
-		80, 0, 0, 255, 
-		100, 0, 0, 255,
-		255, 0, 0, 255,
-		0, 80, 0, 255,
-		0, 100, 0, 255,
-		0, 255, 0, 255,
-		0, 0, 80, 255,
-		0, 0, 100, 255,
-		0, 0, 255, 255
-	};
+	const int imageDataLength = SCREEN_WIDTH * SCREEN_HEIGHT * 4; //4 because RGBA components
+	unsigned char* imageData = new unsigned char[imageDataLength];
+
+	for (int i = 0; i < imageDataLength; i += 4) {
+		imageData[i] = 0;
+		imageData[i + 1] = 0;
+		imageData[i + 2] = 255;
+		imageData[i + 3] = 255;
+	}
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -134,15 +131,14 @@ int main()
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 3, 3, 0, GL_BGRA, GL_UNSIGNED_BYTE, &imageData);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		
-		for (int i = 0; i < imageDataLength; i += 4) {
-			imageData[i] += 15;
-			imageData[i + 1] += 15;
-			imageData[i + 2] += 15;
-
-		}
+		/*for (int i = 0; i < imageDataLength; i += 4) {
+			if (imageData[i] > 0) {
+				imageData[i] += 15;
+			}
+		}*/
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
@@ -156,6 +152,8 @@ int main()
 	glDeleteBuffers(1, &VBO);
 
 	glfwTerminate();
+	delete[] imageData;
+
 	return 0;
 }
 
