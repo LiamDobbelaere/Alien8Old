@@ -12,27 +12,25 @@ const unsigned int SCR_HEIGHT = 180;
 
 const char* VERTEX_SHADER_SRC = 
 "#version 330 core\n"
-"layout(location = 0) in vec3 vertexPosition_modelspace;\n"
-"layout(location = 1) in vec2 vertexUV;\n"
-"out vec2 UV;\n"
-"out vec4 vertexColor;\n"
-"uniform mat4 MVP;\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aCol;\n"
+"layout(location = 2) in vec2 aUv;\n"
+"out vec3 outCol;\n"
+"out vec2 outUv;\n"
 "void main() {\n"
-//	"gl_Position = MVP * vec4(vertexPosition_modelspace, 1);\n"
-	"gl_Position = vec4(vertexPosition_modelspace, 1.0f);\n"
-	//"UV = vertexUV;\n"
-	"vertexColor = gl_Position;\n"
+	"gl_Position = vec4(aPos, 1.0);\n"
+	"outCol = aCol;\n"
+	"outUv = aUv;\n"
 "}\n";
 
 const char* FRAGMENT_SHADER_SRC =
 "#version 330 core\n"
-"in vec2 UV;\n"
-"in vec4 vertexColor;\n"
+"in vec3 outCol;\n"
+"in vec2 outUv;\n"
 "out vec4 FragColor;\n"
-"uniform sampler2D myTextureSampler;\n"
+"uniform sampler2D tex;\n"
 "void main() {\n"
-//"color = texture(myTextureSampler, UV).rgb;\n"
-"FragColor = vertexColor;\n"
+	"FragColor = texture(tex, outUv) * vec4(outCol, 1.0);\n"
 "};\n";
 
 int main()
@@ -102,12 +100,12 @@ int main()
 	glDeleteShader(fragmentShader);
 
 	float vertices[] = {
-		-1.0f,  1.0f, 0.0f, //Top left
-		 1.0f,  1.0f, 0.0f, //Top right
-		 1.0f, -1.0f, 0.0f, //Bottom right
-		 1.0f, -1.0f, 0.0f, //Bottom right
-     	-1.0f, -1.0f, 0.0f,  //Bottom left
-		-1.0f,  1.0f, 0.0f, //Top left
+		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, //Top left
+		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Top right
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Bottom right
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Bottom right
+     	-1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, //Bottom left
+		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f  //Top left
 	};
 
 	unsigned int VBO, VAO;
@@ -119,8 +117,13 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	//Let's set the attribute pointers for vertices, colors and texture coords
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 
 	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -129,17 +132,34 @@ int main()
 	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
 	glBindVertexArray(0);
 
-
 	// uncomment this call to draw in wireframe polygons.
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	//Generate a texture
+	unsigned int screenTex;
+	glGenTextures(1, &screenTex);
+	glBindTexture(GL_TEXTURE_2D, screenTex);
+	// set the texture wrapping/filtering options (on the currently bound texture object)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	unsigned char imageData[] = {
+		255, 0, 0, 
+		0, 255, 0, 
+		0, 0, 255, 
+		255, 255, 255
+	};
 
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
 
-
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE, &imageData);
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
