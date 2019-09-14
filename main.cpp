@@ -5,6 +5,9 @@
 
 void onFrameBufferSize(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+int compileVertexShader(const char* source);
+int compileFragmentShader(const char* source);
+int linkShaders(const int vertexShader, const int fragmentShader);
 
 // settings
 const unsigned int SCR_WIDTH = 320;
@@ -58,43 +61,10 @@ int main()
 		return -1;
 	}
 
-	//Compile the vertex shader and report result
-	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &VERTEX_SHADER_SRC, NULL);
-	glCompileShader(vertexShader);
-
-	int success;
-	char infoLog[512];
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-	//Compile the fragment shader and report result
-	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &FRAGMENT_SHADER_SRC, NULL);
-	glCompileShader(fragmentShader);
-
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-	}
-
-	//Link the shaders together
-	int shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-	if (!success) {
-		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-	}
+	//Compile the shaders and link them
+	int vertexShader = compileVertexShader(VERTEX_SHADER_SRC);
+	int fragmentShader = compileFragmentShader(FRAGMENT_SHADER_SRC);
+	int shaderProgram = linkShaders(vertexShader, fragmentShader);
 
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
@@ -145,7 +115,8 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	unsigned char imageData[3*3*4] = {
+	const int imageDataLength = 3 * 3 * 4;
+	unsigned char imageData[imageDataLength] = {
 		80, 0, 0, 255, 
 		100, 0, 0, 255,
 		255, 0, 0, 255,
@@ -165,6 +136,13 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 3, 3, 0, GL_BGRA, GL_UNSIGNED_BYTE, &imageData);
 		glGenerateMipmap(GL_TEXTURE_2D);
+		
+		for (int i = 0; i < imageDataLength; i += 4) {
+			imageData[i] += 15;
+			imageData[i + 1] += 15;
+			imageData[i + 2] += 15;
+
+		}
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
@@ -179,6 +157,57 @@ int main()
 
 	glfwTerminate();
 	return 0;
+}
+
+int compileVertexShader(const char* source) {
+	int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &source, NULL);
+	glCompileShader(vertexShader);
+
+	int success;
+	char infoLog[512];
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+
+	return vertexShader;
+}
+
+int compileFragmentShader(const char* source) {
+	int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &source, NULL);
+	glCompileShader(fragmentShader);
+
+	int success;
+	char infoLog[512];
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success)
+	{
+		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+	}
+
+	return fragmentShader;
+}
+
+int linkShaders(const int vertexShader, const int fragmentShader) {
+	int shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	glLinkProgram(shaderProgram);
+
+	int success;
+	char infoLog[512];
+	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+	if (!success) {
+		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+		std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+	}
+
+	return shaderProgram;
 }
 
 void processInput(GLFWwindow* window)
