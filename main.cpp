@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <fstream>
 
 void onFrameBufferSize(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -10,8 +11,8 @@ int compileFragmentShader(const char* source);
 int linkShaders(const int vertexShader, const int fragmentShader);
 
 // settings
-static const unsigned int SCREEN_WIDTH = 320;
-static const unsigned int SCREEN_HEIGHT = 180;
+static const unsigned int SCREEN_WIDTH = 128;
+static const unsigned int SCREEN_HEIGHT = 72;
 
 const char* VERTEX_SHADER_SRC = 
 "#version 330 core\n"
@@ -38,12 +39,27 @@ const char* FRAGMENT_SHADER_SRC =
 
 int main()
 {
+	long size = 3 * SCREEN_WIDTH * SCREEN_HEIGHT;
+	char* buffer = new char[size];
+	std::ifstream infile("D:\\GitHub\\alien8\\Alien8\\misc\\testscene.bmp");
+	infile.seekg(0, infile.end);
+	size_t length = infile.tellg();
+	infile.seekg(53, infile.beg);
+
+	if (length > size)
+	{
+		length = size;
+	}
+
+	infile.read(buffer, length);
+
+
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Alien 8", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCREEN_WIDTH*4, SCREEN_HEIGHT*4, "Alien 8", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -118,10 +134,10 @@ int main()
 	const int imageDataLength = SCREEN_WIDTH * SCREEN_HEIGHT * 4; //4 because RGBA components
 	unsigned char* imageData = new unsigned char[imageDataLength];
 
-	for (int i = 0; i < imageDataLength; i += 4) {
-		imageData[i] = 0;
-		imageData[i + 1] = 0;
-		imageData[i + 2] = 255;
+	for (int i = 0, bufPos = 0; i < imageDataLength; i += 4, bufPos += 3) {
+		imageData[i] = buffer[bufPos];
+		imageData[i + 1] = buffer[bufPos + 2];
+		imageData[i + 2] = buffer[bufPos + 1];
 		imageData[i + 3] = 255;
 	}
 
