@@ -134,11 +134,17 @@ int main()
 	const int imageDataLength = SCREEN_WIDTH * SCREEN_HEIGHT * 4; //4 because RGBA components
 	unsigned char* imageData = new unsigned char[imageDataLength];
 
-	for (int i = 0, bufPos = 0; i < imageDataLength; i += 4, bufPos += 3) {
-		imageData[i] = buffer[bufPos];
-		imageData[i + 1] = buffer[bufPos + 2];
-		imageData[i + 2] = buffer[bufPos + 1];
+	int bufPos = 1;
+	for (int i = 0; i < imageDataLength; i += 4) {
+		imageData[i] = buffer[bufPos + 2];
+		imageData[i + 1] = buffer[bufPos + 1];
+		imageData[i + 2] = buffer[bufPos];
 		imageData[i + 3] = 255;
+
+		bufPos += 3;
+		if (bufPos % (387) == 0) {
+			bufPos += 1;
+		}
 	}
 
 	while (!glfwWindowShouldClose(window))
@@ -149,12 +155,6 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 		glGenerateMipmap(GL_TEXTURE_2D);
-		
-		/*for (int i = 0; i < imageDataLength; i += 4) {
-			if (imageData[i] > 0) {
-				imageData[i] += 15;
-			}
-		}*/
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
