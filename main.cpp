@@ -2,10 +2,12 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <vector>
 #include <fstream>
 
 void onFrameBufferSize(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
+void tick();
 int compileVertexShader(const char* source);
 int compileFragmentShader(const char* source);
 int linkShaders(const int vertexShader, const int fragmentShader);
@@ -37,8 +39,27 @@ const char* FRAGMENT_SHADER_SRC =
 	"FragColor = texture(tex, outUv) * vec4(outCol, 1.0);\n"
 "};\n";
 
+struct Sprite {
+	unsigned char x;
+	unsigned char y;
+};
+
+std::vector<Sprite*> sprites;
+std::vector<Sprite*> spritesForScanline;
+Sprite testSprite;
+
+bool left;
+bool right;
+bool up;
+bool down;
+
 int main()
 {
+	testSprite.x = 24;
+	testSprite.y = 8;
+
+	sprites.push_back(&testSprite);
+
 	long size = 3 * SCREEN_WIDTH * SCREEN_HEIGHT;
 	char* buffer = new char[size];
 	std::ifstream infile("D:\\GitHub\\alien8\\Alien8\\misc\\testscene.bmp");
@@ -86,12 +107,12 @@ int main()
 	glDeleteShader(fragmentShader);
 
 	float vertices[] = {
-		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, //Top left
-		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Top right
-		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Bottom right
-		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Bottom right
-     	-1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, //Bottom left
-		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f  //Top left
+		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, //Top left
+		 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, //Top right
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Bottom right
+		 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, //Bottom right
+     	-1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, //Bottom left
+		-1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f  //Top left
 	};
 
 	unsigned int VBO, VAO;
@@ -134,7 +155,7 @@ int main()
 	const int imageDataLength = SCREEN_WIDTH * SCREEN_HEIGHT * 4; //4 because RGBA components
 	unsigned char* imageData = new unsigned char[imageDataLength];
 
-	int bufPos = 1;
+	/*int bufPos = 1;
 	for (int i = 0; i < imageDataLength; i += 4) {
 		imageData[i] = buffer[bufPos + 2];
 		imageData[i + 1] = buffer[bufPos + 1];
@@ -145,16 +166,57 @@ int main()
 		if (bufPos % (387) == 0) {
 			bufPos += 1;
 		}
+	}*/
+
+	//Initialize imageData
+	for (int i = 0; i < imageDataLength; i += 4) {
+		imageData[i] = 0;
+		imageData[i + 1] = 0;
+		imageData[i + 2] = 0;
+		imageData[i + 3] = 255;
 	}
 
 	while (!glfwWindowShouldClose(window))
 	{
 		processInput(window);
+		tick();
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 		glGenerateMipmap(GL_TEXTURE_2D);
+
+		//Re-paint the screen
+		for (int i = 0; i < imageDataLength; i += 4) {
+			int pixelIndex = i / 4;
+			int x = pixelIndex % SCREEN_WIDTH;
+			int y = pixelIndex / SCREEN_WIDTH;
+
+			imageData[i] = 0;
+			imageData[i + 1] = 0;
+			imageData[i + 2] = 0;
+			imageData[i + 3] = 255;
+
+			//See if any sprites need to be drawn this scanline
+			if (x == 0) {
+				spritesForScanline.clear();
+
+				for (auto const& value : sprites) {
+					if (value->y >= y && value->y <= y + 8) {
+						spritesForScanline.push_back(value);
+					}
+				}
+			}
+
+			//Draw sprites from current scanline
+			for (auto const& value : spritesForScanline) {
+				if (value->x >= x && value->x <= x + 8) {
+					imageData[i + 1] = 255; //Make it green, for now
+				}
+			}
+
+			//std::cout << "x" << x << "\ny" << y << std::endl;
+		}
 
 		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
@@ -228,6 +290,57 @@ void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+
+	int leftKey = glfwGetKey(window, GLFW_KEY_A);
+	int rightKey = glfwGetKey(window, GLFW_KEY_D);
+	int upKey = glfwGetKey(window, GLFW_KEY_W);
+	int downKey = glfwGetKey(window, GLFW_KEY_S);
+
+	if (leftKey == GLFW_PRESS) {
+		left = true;
+	}
+	if (leftKey == GLFW_RELEASE) {
+		left = false;
+	}
+
+	if (rightKey == GLFW_PRESS) {
+		right = true;
+	}
+	if (rightKey == GLFW_RELEASE) {
+		right = false;
+	}
+
+	if (upKey == GLFW_PRESS) {
+		up = true;
+	}
+	if (upKey == GLFW_RELEASE) {
+		up = false;
+	}
+
+	if (downKey == GLFW_PRESS) {
+		down = true;
+	}
+	if (downKey == GLFW_RELEASE) {
+		down = false;
+	}
+}
+
+void tick() {
+	if (up) {
+		testSprite.y -= 1;
+	}
+
+	if (down) {
+		testSprite.y += 1;
+	}
+
+	if (left) {
+		testSprite.x -= 1;
+	}
+
+	if (right) {
+		testSprite.x += 1;
+	}
 }
 
 void onFrameBufferSize(GLFWwindow* window, int width, int height)
